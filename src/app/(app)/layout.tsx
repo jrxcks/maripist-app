@@ -241,8 +241,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Page Content Rendered Here - Remove ALL padding */}
-          <main className="flex-1 overflow-y-auto hide-scrollbar">
+          {/* Page Content Rendered Here - Remove overflow-y-auto */}
+          <main className="flex-1 hide-scrollbar">
               {children}
           </main>
           <ProfileSettingsModal 
