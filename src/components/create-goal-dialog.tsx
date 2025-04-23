@@ -30,20 +30,22 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalSaved, goalToEdit }
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'To Do' | 'In Progress' | 'Completed'>('To Do');
-  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  // const [dueDate, setDueDate] = useState<Date | undefined>(undefined); // Comment out dueDate state
   const [isLoading, setIsLoading] = useState(false);
 
+  // Effect to populate form when editing
   useEffect(() => {
-    if (goalToEdit && open) {
+    if (goalToEdit && open) { 
       setTitle(goalToEdit.title);
       setDescription(goalToEdit.description || '');
       setStatus(goalToEdit.status);
-      setDueDate(goalToEdit.due_date ? new Date(goalToEdit.due_date + 'T00:00:00') : undefined);
+      // setDueDate(goalToEdit.due_date ? new Date(goalToEdit.due_date + 'T00:00:00') : undefined); // Comment out
     } else if (!goalToEdit) {
+      // Reset form only when opening for create mode
       setTitle('');
       setDescription('');
       setStatus('To Do');
-      setDueDate(undefined);
+      // setDueDate(undefined); // Comment out
     }
   }, [goalToEdit, open]);
 
@@ -62,27 +64,29 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalSaved, goalToEdit }
       return;
     }
 
-    const formattedDueDate = dueDate ? dueDate.toISOString().split('T')[0] : null;
+    // const formattedDueDate = dueDate ? dueDate.toISOString().split('T')[0] : null; // Comment out
     const goalData = {
       title: title.trim(),
       description: description.trim() || null,
       status: status,
-      due_date: formattedDueDate,
+      // due_date: formattedDueDate, // Comment out
     };
     const goalDataForInsert = { ...goalData, user_id: user.id };
 
     let error;
     if (goalToEdit) {
+      // --- UPDATE ---
       const { error: updateError } = await supabase
         .from('goals')
-        .update(goalData)
+        .update(goalData) // Update without due_date
         .eq('id', goalToEdit.id)
-        .eq('user_id', user.id);
+        .eq('user_id', user.id); 
       error = updateError;
     } else {
+      // --- INSERT ---
       const { error: insertError } = await supabase
         .from('goals')
-        .insert(goalDataForInsert);
+        .insert(goalDataForInsert); // Insert without due_date
       error = insertError;
     }
 
@@ -150,7 +154,8 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalSaved, goalToEdit }
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            {/* Comment out Due Date Section */}
+            {/* <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="due-date" className="text-right">
                 Due Date
               </Label>
@@ -159,7 +164,7 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalSaved, goalToEdit }
                 onSelect={setDueDate} 
                 className="col-span-3"
               />
-            </div>
+            </div> */}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>

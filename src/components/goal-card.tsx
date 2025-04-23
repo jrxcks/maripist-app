@@ -100,11 +100,12 @@ export function GoalCard({ goal, onUpdateStatus, onEdit, onDelete }: GoalCardPro
               </Button>
            )}
         </div>
-        {goal.due_date && (
+        {/* Comment out Due Date Display */}
+        {/* {goal.due_date && (
           <span className="text-muted-foreground">
             Due: {new Date(goal.due_date + 'T00:00:00').toLocaleDateString()}
           </span>
-        )}
+        )} */}
       </div>
     </div>
   );
