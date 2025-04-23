@@ -18,6 +18,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Maripist - Your AI Therapist",
   description: "AI-powered therapy companion",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/resizable";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from '@/components/ui/button';
-import { PlusCircle, MessageSquare, Send, MoreHorizontal, Trash2, Pencil, ChevronLeft } from 'lucide-react';
+import { PlusCircle, MessageSquare, Send, MoreHorizontal, Trash2, Pencil, ChevronLeft, Mic } from 'lucide-react';
 import { CreateTherapistDialog } from '@/components/create-therapist-dialog';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from "@/lib/utils";
@@ -179,25 +179,95 @@ function ChatArea({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // --- State and Refs for Speech Recognition ---
+  const [isListening, setIsListening] = useState(false);
+  const [speechRecognitionSupported, setSpeechRecognitionSupported] = useState(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  
+  // --- State for TTS Voices ---
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  // --- End State for TTS Voices ---
 
+  // --- Effect to Load Voices ---
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    const loadVoices = () => {
+        const availableVoices = window.speechSynthesis.getVoices();
+        if (availableVoices.length > 0) {
+            console.log("[TTS Voices] Available:", availableVoices.map(v => v.name));
+            setVoices(availableVoices);
+        }
+    };
+    
+    // Initial load attempt
+    loadVoices();
+    
+    // Listen for changes (voices might load asynchronously)
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    
+    // Cleanup listener
+    return () => {
+        window.speechSynthesis.onvoiceschanged = null;
+    };
+  }, []); // Run only once on mount
+  // --- End Effect to Load Voices ---
 
-  const handleSendMessage = async () => {
-    if (!selectedTherapist || inputMessage.trim() === '' || isLoadingResponse) return;
+  // --- Text-to-Speech Function (Updated to use selected voice) ---
+  const speakText = useCallback((text: string) => {
+    if ('speechSynthesis' in window && voices.length > 0) {
+      window.speechSynthesis.cancel(); 
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // --- Voice Selection Logic --- 
+      // Try to find a preferred voice (Example: Google US English)
+      let selectedVoice = voices.find(voice => voice.name === 'Google US English');
+      // Fallback: Try any English voice
+      if (!selectedVoice) {
+          selectedVoice = voices.find(voice => voice.lang.startsWith('en'));
+      }
+      // Fallback: Use the first available voice if still nothing found
+      if (!selectedVoice) {
+          selectedVoice = voices[0];
+      }
+      
+      if (selectedVoice) {
+         console.log("[TTS] Using voice:", selectedVoice.name);
+         utterance.voice = selectedVoice;
+      } else {
+          console.log("[TTS] Using default voice.");
+      }
+      // --- End Voice Selection Logic ---
+      
+      // Optional: Configure rate, pitch
+      // utterance.rate = 1;
+      // utterance.pitch = 1;
+      
+      window.speechSynthesis.speak(utterance);
+      console.log("[TTS] Speaking:", text);
+    } else {
+      if (voices.length === 0) console.warn("[TTS] No voices loaded yet.");
+      else console.warn("Text-to-Speech (SpeechSynthesis) not supported.");
+    }
+  // Include voices in dependency array
+  }, [voices]); 
+  // --- End Text-to-Speech Function ---
+
+  // --- handleSendMessage (Moved Up) ---
+  const handleSendMessage = useCallback(async (e?: React.FormEvent | null, textToSend?: string) => {
+    e?.preventDefault(); 
+    const messageText = textToSend ?? inputMessage;
+    if (!selectedTherapist || messageText.trim() === '' || isLoadingResponse) return;
 
     setIsLoadingResponse(true);
-    const currentInput = inputMessage;
-    setInputMessage('');
+    if (!textToSend) { setInputMessage(''); }
 
     const newUserMessage: DisplayMessage = {
-      id: 'pending-' + Date.now().toString(), // Temporary pending ID
-      text: currentInput,
+      id: 'pending-' + Date.now().toString(),
+      text: messageText,
       sender: 'user'
     };
-
-    // --- Insert User Message to DB --- 
+    
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
         console.error("User not found, cannot save message");
@@ -206,31 +276,28 @@ function ChatArea({
         return;
     }
 
-    // Optimistically update UI with pending message
-    onMessagesUpdate([...messages, newUserMessage]);
+    onMessagesUpdate([...messages, newUserMessage]); // Optimistic UI update
 
     const { data: insertedUserData, error: userInsertError } = await supabase
         .from('chat_messages')
-        .insert({ user_id: user.id, therapist_id: selectedTherapist.id, sender: 'user', content: newUserMessage.text })
-        .select('id') // Select the ID of the inserted row
-        .single(); // Expect a single row back
+        .insert({ user_id: user.id, therapist_id: selectedTherapist.id, sender: 'user', content: messageText })
+        .select('id').single();
 
+    let finalUserMessage = newUserMessage;
     if (userInsertError || !insertedUserData) {
         console.error("Error saving user message:", userInsertError);
         // Update UI to show error state for the message?
-        const errorMsg: DisplayMessage = {...newUserMessage, id: 'error-user-' + newUserMessage.id, text: newUserMessage.text + " (Error saving)" }
+        const errorMsg = {...newUserMessage, id: 'error-user-' + newUserMessage.id, text: newUserMessage.text + " (Error saving)" };
         onMessagesUpdate([...messages, errorMsg]); 
         setIsLoadingResponse(false);
         return; // Stop if user message didn't save
+    } else {
+       finalUserMessage = { ...newUserMessage, id: insertedUserData.id };
     }
-
-    // Update the message ID in local state with the real ID from DB
-    const finalUserMessage = { ...newUserMessage, id: insertedUserData.id };
+    
     const messagesWithRealUserId = [...messages, finalUserMessage];
     onMessagesUpdate(messagesWithRealUserId); // Update parent with real ID
-    // --- End Insert User Message --- 
 
-    // Prepare messages for API using the list with the REAL user message ID
     const apiMessages: ApiMessage[] = messagesWithRealUserId
       .filter(msg => !msg.id.startsWith('initial-') && !msg.id.startsWith('pending-') && !msg.id.startsWith('error-')) // Filter out temporary/error IDs
       .map(msg => ({ role: msg.sender === 'user' ? 'user' : 'assistant', content: msg.text }));
@@ -270,7 +337,11 @@ function ChatArea({
 
         // Update parent state with final AI message (real or error ID)
         onMessagesUpdate([...messagesWithRealUserId, finalAiMessage]); 
-
+        
+        // --- Speak the AI response --- 
+        speakText(finalAiMessage.text); 
+        // ------------------------------
+        
       } else { throw new Error("Empty API response"); }
 
     } catch (error) {
@@ -278,10 +349,64 @@ function ChatArea({
       const errorDisplayMessage: DisplayMessage = { id: Date.now().toString() + '-err', text: `API Error: ${error instanceof Error ? error.message : 'Unknown'}`, sender: 'ai' };
       // Save error message to DB? Probably not. Just show in UI.
       onMessagesUpdate([...messagesWithRealUserId, errorDisplayMessage]); // Show API error after user message
+      // --- Speak the error message? --- 
+      // speakText(errorDisplayMessage.text); // Optional: Speak errors too
+      // --------------------------------
     } finally {
       setIsLoadingResponse(false);
     }
-  };
+  }, [selectedTherapist, isLoadingResponse, inputMessage, messages, onMessagesUpdate, speakText]); 
+  // --- End handleSendMessage ---
+
+  // ... useEffect for scroll ...
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // --- Speech Recognition Setup Effect (Now after handleSendMessage) ---
+  useEffect(() => {
+    // Check for browser support (prefixed for Safari)
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+        setSpeechRecognitionSupported(true);
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false; // Listen for a single utterance
+        recognition.lang = 'en-US'; // Set language
+        recognition.interimResults = false; // We only want the final result
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[event.results.length - 1][0].transcript.trim();
+            console.log("Speech recognized:", transcript);
+            if (transcript) {
+                 handleSendMessage(null, transcript);
+            }
+        };
+
+        recognition.onerror = (event) => {
+            console.error("Speech recognition error:", event.error);
+            toast.error(`Speech recognition error: ${event.error}`);
+            setIsListening(false); // Ensure listening state is reset on error
+        };
+
+        recognition.onend = () => {
+            console.log("Speech recognition ended.");
+            setIsListening(false); // Reset listening state when recognition ends
+        };
+
+        recognitionRef.current = recognition;
+    } else {
+        console.warn("Speech Recognition not supported by this browser.");
+        setSpeechRecognitionSupported(false);
+    }
+
+    // Cleanup function to stop recognition if component unmounts while listening
+    return () => {
+        if (recognitionRef.current && isListening) {
+            recognitionRef.current.stop();
+        }
+    };
+  }, [handleSendMessage]); 
+  // --- End Speech Recognition Setup Effect ---
 
   const handleDeleteTherapist = async () => {
     if (!selectedTherapist) return;
@@ -304,6 +429,36 @@ function ChatArea({
       onTherapistDeleted(therapistIdToDelete); // Notify parent
     }
   };
+
+  // --- Speech Recognition Toggle Function ---
+  const handleToggleListen = () => {
+    if (!speechRecognitionSupported) {
+        toast.error("Speech recognition is not supported by your browser.");
+        return;
+    }
+    if (!recognitionRef.current) {
+        console.error("SpeechRecognition instance not available.");
+        return;
+    }
+
+    if (isListening) {
+        console.log("Stopping speech recognition...");
+        recognitionRef.current.stop();
+        // onend handler will set isListening to false
+    } else {
+        console.log("Starting speech recognition...");
+        try {
+           // Ask for permission and start listening
+           recognitionRef.current.start();
+           setIsListening(true);
+        } catch (error) {
+           console.error("Error starting speech recognition:", error);
+           toast.error("Could not start microphone. Check permissions?");
+           setIsListening(false); // Reset if start fails
+        }
+    }
+  };
+  // --- End Speech Recognition Toggle Function ---
 
   if (!selectedTherapist) {
     return (
@@ -392,7 +547,10 @@ function ChatArea({
        </ScrollArea>
 
       <footer className="p-4 border-t flex-shrink-0">
-        <div className="relative">
+        <form 
+          onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+          className="flex items-start gap-2"
+        >
           <Textarea
             placeholder="Type your message..."
             value={inputMessage}
@@ -403,21 +561,31 @@ function ChatArea({
                 handleSendMessage();
               }
             }}
-            className="pr-16 resize-none min-h-[48px]"
-            rows={1}
-            disabled={isLoadingResponse}
+            className="flex-grow resize-none min-h-[40px] max-h-[120px] overflow-y-auto"
           />
-           <Button 
-             type="submit" 
-             size="icon" 
-             className="absolute right-3 bottom-2 h-8 w-8"
-             onClick={handleSendMessage} 
-             disabled={!inputMessage.trim() || isLoadingResponse}
-           >
+          {/* Microphone Button */}
+          {speechRecognitionSupported && (
+            <Button 
+              type="button" 
+              variant={isListening ? "destructive" : "outline"} // Change appearance when listening
+              size="icon" 
+              onClick={handleToggleListen}
+              disabled={isLoadingResponse || isLoadingMessages} // Disable if sending/loading
+            >
+              <Mic className="h-4 w-4" />
+              <span className="sr-only">{isListening ? 'Stop listening' : 'Start listening'}</span>
+            </Button>
+          )}
+          {/* Send Button */}
+          <Button 
+            type="submit" 
+            size="icon" 
+            disabled={!inputMessage.trim() || isLoadingResponse || isLoadingMessages}
+          >
             <Send className="h-4 w-4" />
             <span className="sr-only">Send</span>
           </Button>
-        </div>
+        </form>
       </footer>
 
       <CreateTherapistDialog 
