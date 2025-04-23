@@ -114,7 +114,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <ProfileModalContext.Provider value={{ isProfileModalOpen, toggleProfileModal }}>
-      <div className={cn("flex h-screen w-full bg-muted/40")}>
+      <div className={cn("flex h-dvh w-full bg-muted/40")}>
         {/* --- Sidebar (Desktop) --- */}
         <aside className="hidden w-60 flex-col border-r bg-background p-4 sm:flex">
           <div className="mb-6 flex h-16 items-center justify-start px-2">
