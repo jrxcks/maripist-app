@@ -529,10 +529,10 @@ export default function TherapistsPage() {
   const currentMessages = selectedTherapist ? chatHistories[selectedTherapist.id] || [] : [];
 
   return (
-    <div className="h-full">
+    <div className="flex flex-col h-full">
 
-      {/* --- Mobile View Container: Add flex, height, and overflow --- */}
-      <div className="h-full flex flex-col overflow-hidden block sm:hidden"> 
+      {/* --- Mobile View Container: Remove 'block' class --- */}
+      <div className="h-full flex flex-col overflow-hidden sm:hidden"> 
         {selectedTherapist ? (
           <ChatArea 
              selectedTherapist={selectedTherapist} 
