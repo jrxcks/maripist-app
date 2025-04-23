@@ -531,8 +531,8 @@ export default function TherapistsPage() {
   return (
     <div className="h-full">
 
-      {/* --- Mobile View Container: Add h-full --- */}
-      <div className="h-full block sm:hidden"> 
+      {/* --- Mobile View Container: Add flex, height, and overflow --- */}
+      <div className="h-full flex flex-col overflow-hidden block sm:hidden"> 
         {selectedTherapist ? (
           <ChatArea 
              selectedTherapist={selectedTherapist} 
