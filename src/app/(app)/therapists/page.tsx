@@ -405,7 +405,7 @@ function ChatArea({
             recognitionRef.current.stop();
         }
     };
-  }, [handleSendMessage]); 
+  }, [handleSendMessage, isListening]); 
   // --- End Speech Recognition Setup Effect ---
 
   const handleDeleteTherapist = async () => {
