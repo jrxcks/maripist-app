@@ -92,10 +92,11 @@ function TherapistList({ selectedTherapist, onSelectTherapist }: TherapistListPr
       console.log("[fetchTherapists] Fetched therapists count:", fetchedTherapists.length);
       setTherapists(fetchedTherapists);
       
-      if (fetchedTherapists.length === 0) {
-        console.log("[fetchTherapists] Therapist count is 0, attempting to open dialog...");
-        setIsCreateDialogOpen(true); 
-      }
+      // REMOVED: Don't set dialog state directly within the fetch function
+      // if (fetchedTherapists.length === 0) {
+      //   console.log("[fetchTherapists] Therapist count is 0, attempting to open dialog...");
+      //   setIsCreateDialogOpen(true);
+      // }
     }
     setIsLoadingList(false);
   }, []);
@@ -103,6 +104,15 @@ function TherapistList({ selectedTherapist, onSelectTherapist }: TherapistListPr
   useEffect(() => {
     fetchTherapists();
   }, [fetchTherapists]);
+
+  // ADDED: Effect to open dialog after initial load if no therapists exist
+  useEffect(() => {
+    // Only run after the initial loading is complete
+    if (!isLoadingList && therapists.length === 0) {
+      console.log("[Effect] Loading finished, therapist count is 0. Opening create dialog.");
+      setIsCreateDialogOpen(true);
+    }
+  }, [isLoadingList, therapists]); // Depend on loading state and therapists array
 
   const handleTherapistCreated = () => {
     fetchTherapists();
