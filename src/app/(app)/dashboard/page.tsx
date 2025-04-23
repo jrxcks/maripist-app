@@ -40,7 +40,7 @@ export default function DashboardPage() {
   const timeGreeting = getTimeBasedGreeting();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <Card className="bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold text-green-900 dark:text-green-100">

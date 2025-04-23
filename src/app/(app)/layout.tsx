@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { supabase } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import ProfileSettingsModal from '@/components/profile-settings-modal';
@@ -158,6 +158,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </Button>
                  </SheetTrigger>
                  <SheetContent side="left" className="flex flex-col">
+                   {/* Add Screen-Reader Only Title */}
+                   <SheetTitle className="sr-only">Navigation Menu</SheetTitle> 
                    {/* Mobile Navigation inside Sheet */}
                     <nav className="grid gap-4 text-lg font-medium">
                       <Link
@@ -239,8 +241,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
           </header>
 
-          {/* Page Content Rendered Here */}
-          <main className="flex-1 overflow-y-auto p-6 hide-scrollbar">
+          {/* Page Content Rendered Here - Remove ALL padding */}
+          <main className="flex-1 overflow-y-auto hide-scrollbar">
               {children}
           </main>
           <ProfileSettingsModal 

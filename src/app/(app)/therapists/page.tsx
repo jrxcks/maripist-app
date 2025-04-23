@@ -305,7 +305,7 @@ function ChatArea({
 
   return (
     <div className="flex flex-col h-full">
-      <header className="p-4 border-b flex items-center justify-between flex-shrink-0">
+      <header className="px-4 pb-4 pt-2 border-b flex items-center justify-between flex-shrink-0">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -337,7 +337,7 @@ function ChatArea({
         </div>
       </header>
 
-      <ScrollArea className="flex-grow p-4">
+      <ScrollArea className="flex-grow p-4 overflow-y-auto">
         <div className="space-y-4">
            {isLoadingMessages && (
              <div className="flex justify-center items-center h-full">
@@ -531,8 +531,8 @@ export default function TherapistsPage() {
   return (
     <div className="h-full">
 
-      {/* --- Mobile View --- */}
-      <div className="h-full block sm:hidden"> {/* Mobile container */} 
+      {/* --- Mobile View Container: Add h-full --- */}
+      <div className="h-full block sm:hidden"> 
         {selectedTherapist ? (
           <ChatArea 
              selectedTherapist={selectedTherapist} 
