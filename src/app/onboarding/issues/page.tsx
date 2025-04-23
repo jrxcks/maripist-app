@@ -29,10 +29,11 @@ export default function IssueSelectionPage() {
     );
   };
 
-  const handleNext = () => {
+  const handleNext = (e: React.FormEvent) => {
+    e.preventDefault(); // Explicitly prevent default form submission
     console.log('Selected issues:', selectedIssues);
     // TODO: Save selected issues
-    router.push('/dashboard'); // Navigate to dashboard
+    router.push('/therapists'); // Navigate to therapists page
   };
 
   return (
