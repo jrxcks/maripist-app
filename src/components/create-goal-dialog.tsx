@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,19 +17,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
+import { Goal } from '@/lib/types';
 
 interface CreateGoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onGoalCreated: () => void; // Function to call after successful creation
+  onGoalSaved: () => void;
+  goalToEdit?: Goal | null;
 }
 
-export function CreateGoalDialog({ open, onOpenChange, onGoalCreated }: CreateGoalDialogProps) {
+export function CreateGoalDialog({ open, onOpenChange, onGoalSaved, goalToEdit }: CreateGoalDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'To Do' | 'In Progress' | 'Completed'>('To Do');
   const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (goalToEdit && open) {
+      setTitle(goalToEdit.title);
+      setDescription(goalToEdit.description || '');
+      setStatus(goalToEdit.status);
+      setDueDate(goalToEdit.due_date ? new Date(goalToEdit.due_date + 'T00:00:00') : undefined);
+    } else if (!goalToEdit) {
+      setTitle('');
+      setDescription('');
+      setStatus('To Do');
+      setDueDate(undefined);
+    }
+  }, [goalToEdit, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,49 +57,57 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalCreated }: CreateGo
     setIsLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('You must be logged in to create a goal.');
+      toast.error('You must be logged in to save a goal.');
       setIsLoading(false);
       return;
     }
 
-    // Format due date for Supabase (YYYY-MM-DD or null)
     const formattedDueDate = dueDate ? dueDate.toISOString().split('T')[0] : null;
+    const goalData = {
+      title: title.trim(),
+      description: description.trim() || null,
+      status: status,
+      due_date: formattedDueDate,
+    };
+    const goalDataForInsert = { ...goalData, user_id: user.id };
 
-    const { error } = await supabase
-      .from('goals')
-      .insert({
-        user_id: user.id,
-        title: title.trim(),
-        description: description.trim() || null,
-        status: status,
-        due_date: formattedDueDate,
-      });
+    let error;
+    if (goalToEdit) {
+      const { error: updateError } = await supabase
+        .from('goals')
+        .update(goalData)
+        .eq('id', goalToEdit.id)
+        .eq('user_id', user.id);
+      error = updateError;
+    } else {
+      const { error: insertError } = await supabase
+        .from('goals')
+        .insert(goalDataForInsert);
+      error = insertError;
+    }
 
     setIsLoading(false);
 
     if (error) {
-      console.error("Error creating goal:", error);
-      toast.error(`Failed to create goal: ${error.message}`);
+      console.error("Error saving goal:", error);
+      toast.error(`Failed to ${goalToEdit ? 'update' : 'create'} goal: ${error.message}`);
     } else {
-      toast.success('Goal created successfully!');
-      onGoalCreated(); // Notify parent component
-      onOpenChange(false); // Close dialog
-      // Reset form
-      setTitle('');
-      setDescription('');
-      setStatus('To Do');
-      setDueDate(undefined);
+      toast.success(`Goal ${goalToEdit ? 'updated' : 'created'} successfully!`);
+      onGoalSaved();
+      onOpenChange(false);
     }
   };
+
+  const dialogTitle = goalToEdit ? "Edit Goal" : "Create New Goal";
+  const dialogDescription = goalToEdit ? "Update the details of your goal." : "Define your new goal here. Click save when you&apos;re done.";
+  const buttonText = goalToEdit ? "Save Changes" : "Save Goal";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create New Goal</DialogTitle>
-          <DialogDescription>
-            Define your new goal here. Click save when you&apos;re done.
-          </DialogDescription>
+          <DialogTitle>{dialogTitle}</DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
@@ -140,7 +164,7 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalCreated }: CreateGo
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>Cancel</Button>
             <Button type="submit" disabled={isLoading || !title.trim()}>
-              {isLoading ? 'Saving...' : 'Save Goal'}
+              {isLoading ? 'Saving...' : buttonText}
             </Button>
           </DialogFooter>
         </form>
