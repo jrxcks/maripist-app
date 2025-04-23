@@ -529,10 +529,16 @@ export default function TherapistsPage() {
   const currentMessages = selectedTherapist ? chatHistories[selectedTherapist.id] || [] : [];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="relative h-full">
 
-      {/* --- Mobile View Container: Remove 'block' class --- */}
-      <div className="h-full flex flex-col overflow-hidden sm:hidden"> 
+      <div 
+        className={cn(
+          "sm:hidden",
+          selectedTherapist 
+            ? "absolute inset-0 flex flex-col overflow-hidden bg-background z-20"
+            : "h-full"
+        )}
+      > 
         {selectedTherapist ? (
           <ChatArea 
              selectedTherapist={selectedTherapist} 
@@ -552,12 +558,10 @@ export default function TherapistsPage() {
         )}
       </div>
 
-      {/* --- Desktop View Wrapper --- */}
-      <div className="h-full hidden sm:flex"> {/* Desktop container */} 
-        {/* ResizablePanelGroup INSIDE the desktop container */}
+      <div className="h-full hidden sm:flex"> 
         <ResizablePanelGroup 
           direction="horizontal" 
-          className="h-full w-full rounded-lg border" // Add styling here if needed, removed from individual panels
+          className="flex-grow min-h-0 rounded-lg border"
         >
           <ResizablePanel defaultSize={25} minSize={20} maxSize={40}>
             <TherapistList 
