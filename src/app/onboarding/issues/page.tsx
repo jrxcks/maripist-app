@@ -32,7 +32,7 @@ export default function IssueSelectionPage() {
   const handleNext = () => {
     console.log('Selected issues:', selectedIssues);
     // TODO: Save selected issues
-    router.push('/chat'); // Navigate to chat page
+    router.push('/dashboard'); // Navigate to dashboard
   };
 
   return (
