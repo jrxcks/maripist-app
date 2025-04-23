@@ -75,7 +75,7 @@ export default function GoalsPage() {
           </div>
         ) : goals.length === 0 ? (
           <p className="text-muted-foreground text-center mt-10">
-            You haven't added any goals yet. Click "Add Goal" to start.
+            You haven&apos;t added any goals yet. Click &quot;Add Goal&quot; to start.
           </p>
         ) : (
           <div className="space-y-4">

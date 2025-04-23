@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +17,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { supabase } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { Goal } from '../app/(app)/goals/page'; // Adjust path if Goal type is moved
 
 interface CreateGoalDialogProps {
   open: boolean;
@@ -84,7 +82,7 @@ export function CreateGoalDialog({ open, onOpenChange, onGoalCreated }: CreateGo
         <DialogHeader>
           <DialogTitle>Create New Goal</DialogTitle>
           <DialogDescription>
-            Define your new goal here. Click save when you're done.
+            Define your new goal here. Click save when you&apos;re done.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
