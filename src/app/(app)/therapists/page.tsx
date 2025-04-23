@@ -66,23 +66,36 @@ function TherapistList({ selectedTherapist, onSelectTherapist }: TherapistListPr
   const [isLoadingList, setIsLoadingList] = useState(true);
 
   const fetchTherapists = useCallback(async () => {
+    console.log("[fetchTherapists] Starting fetch...");
     setIsLoadingList(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      console.error("User not logged in");
+      console.error("[fetchTherapists] User not logged in");
       setIsLoadingList(false);
       return;
     }
+    
+    console.log("[fetchTherapists] Fetching from Supabase for user:", user.id);
     const { data, error } = await supabase
       .from('therapists')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true });
+      
+    console.log("[fetchTherapists] Supabase response:", { data, error });
+      
     if (error) {
-      console.error("Error fetching therapists:", error);
+      console.error("[fetchTherapists] Error fetching therapists:", error);
       setTherapists([]);
     } else {
-      setTherapists(data || []);
+      const fetchedTherapists = data || [];
+      console.log("[fetchTherapists] Fetched therapists count:", fetchedTherapists.length);
+      setTherapists(fetchedTherapists);
+      
+      if (fetchedTherapists.length === 0) {
+        console.log("[fetchTherapists] Therapist count is 0, attempting to open dialog...");
+        setIsCreateDialogOpen(true); 
+      }
     }
     setIsLoadingList(false);
   }, []);
@@ -94,6 +107,8 @@ function TherapistList({ selectedTherapist, onSelectTherapist }: TherapistListPr
   const handleTherapistCreated = () => {
     fetchTherapists();
   };
+
+  console.log("[TherapistList Render] isCreateDialogOpen:", isCreateDialogOpen);
 
   return (
     <div className="p-4 h-full flex flex-col">
